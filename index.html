@@ -52,20 +52,6 @@
   .bname { font-weight: 600; white-space: nowrap; }
   .desc { color: var(--dim); font-size: 13.5px; }
   .scroller { overflow-x: auto; }
-  .runcard { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px;
-    background: var(--panel); overflow: hidden; }
-  .runcard summary { padding: 12px 16px; cursor: pointer; display: flex; gap: 14px;
-    flex-wrap: wrap; align-items: baseline; list-style: none; }
-  .runcard summary::-webkit-details-marker { display: none; }
-  .runcard summary b { color: var(--gold); font-size: 16px; }
-  .runcard summary .meta { color: var(--dim); font-size: 13px; }
-  .runbody { padding: 0 16px 14px; }
-  .runbody h4 { margin: 12px 0 6px; font-size: 12px; color: var(--dim);
-    text-transform: uppercase; letter-spacing: .5px; }
-  .claimline { padding: 3px 0; font-size: 14px; }
-  .claimline .rip { display: inline-block; width: 52px; color: var(--dim); font-size: 12px; }
-  .tag { display: inline-block; background: var(--bg); border: 1px solid var(--line);
-    border-radius: 4px; padding: 1px 8px; margin: 2px 4px 2px 0; font-size: 13px; }
   .empty { color: var(--dim); text-align: center; padding: 30px; }
   footer { text-align: center; color: var(--dim); font-size: 12px; padding-bottom: 30px; }
   footer a { color: var(--dim); }
@@ -82,19 +68,19 @@
 <footer>Generated <span id="gen"></span></footer>
 <script src="data.js"></script>
 <script>
-const D = window.BOON_DATA || { boons: [], runs: [], affixes: [], bosses: [], totals: {} };
+const D = window.BOON_DATA || { boons: [], affixes: [], bosses: [], totals: {} };
 const RANK = { legendary: 0, rare: 1, uncommon: 2, common: 3, "": 4 };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 document.getElementById("gen").textContent = D.generated || "?";
 document.getElementById("totals").innerHTML = [
   [D.totals.boons, "boons seen"], [D.totals.claims, "claims logged"],
-  [D.totals.runs, "runs"], [D.totals.deepest, "deepest ripple"], [D.totals.affixes, "affixes"],
+  [D.totals.affixes, "affixes"], [D.totals.bosses, "bosses"],
 ].map(([n, l]) => `<div><b>${n ?? 0}</b><span>${l}</span></div>`).join("");
 
 const state = { tab: "boons", q: "", rarities: new Set(), sort: "name" };
 
-const TABS = [["boons", "Boons"], ["runs", "Runs"], ["affixes", "Affixes"], ["bosses", "Bosses"]];
+const TABS = [["boons", "Boons"], ["affixes", "Affixes"], ["bosses", "Bosses"]];
 const tabsEl = document.getElementById("tabs");
 tabsEl.innerHTML = TABS.map(([id, label]) =>
   `<button data-tab="${id}">${label}</button>`).join("");
@@ -107,7 +93,7 @@ function render() {
   for (const b of tabsEl.querySelectorAll("button"))
     b.classList.toggle("on", b.dataset.tab === state.tab);
   const main = document.getElementById("main");
-  main.innerHTML = { boons: boonsView, runs: runsView, affixes: affixesView, bosses: bossesView }[state.tab]();
+  main.innerHTML = { boons: boonsView, affixes: affixesView, bosses: bossesView }[state.tab]();
   if (state.tab === "boons") wireBoons(main);
 }
 
@@ -161,45 +147,21 @@ function wireBoons(main) {
     });
 }
 
-function runsView() {
-  if (!D.runs.length) return `<div class="empty">No runs recorded.</div>`;
-  return D.runs.map((r, i) => `<details class="runcard" ${i === 0 ? "open" : ""}>
-    <summary><b>Run #${r.run}</b>
-      <span class="meta">${esc(r.date)}</span>
-      <span class="meta">ripple ${r.maxRipple}</span>
-      <span class="meta">${r.claims.length} claim${r.claims.length === 1 ? "" : "s"}</span>
-      ${r.bosses.length ? `<span class="meta">boss: ${esc(r.bosses.map(b => b.name).join(", "))}</span>` : ""}
-    </summary>
-    <div class="runbody">
-      ${r.claims.length ? `<h4>Boons claimed</h4>` + r.claims.map(c => `<div class="claimline">
-          <span class="rip">r${c.ripple}</span>
-          <span class="r-${esc(c.rarity)}">${esc(c.name)}</span>
-          ${c.echoes > 1 ? `<span class="desc"> x${c.echoes}</span>` : ""}</div>`).join("")
-        : `<div class="desc">No claims logged this run.</div>`}
-      ${r.affixes.length ? `<h4>Affixes</h4>` + r.affixes.map(a =>
-          `<span class="tag">${esc(a.name)} <span class="desc">r${a.ripple}</span></span>`).join("") : ""}
-    </div></details>`).join("");
-}
-
 function affixesView() {
   if (!D.affixes.length) return `<div class="empty">No affixes recorded.</div>`;
   const rows = D.affixes.map(a => `<tr>
     <td class="bname">${esc(a.name)}</td>
     <td class="desc">${esc(a.description)}</td>
-    <td class="num desc">run ${a.firstRun}, r${a.firstRipple}</td></tr>`).join("");
+    <td class="num desc">${a.earliestRipple ? "r" + a.earliestRipple : "?"}</td></tr>`).join("");
   return `<div class="scroller"><table><thead><tr><th>Affix</th><th>Description</th>
-    <th class="num">First seen</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <th class="num">Earliest ripple</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function bossesView() {
   if (!D.bosses.length) return `<div class="empty">No bosses recorded.</div>`;
-  const rows = D.bosses.map(b => `<tr>
-    <td class="bname">${esc(b.name)}</td>
-    <td class="num">${b.seen}</td>
-    <td class="num">${b.runs}</td>
-    <td class="desc">${b.ripples.map(r => "r" + r).join(", ")}</td></tr>`).join("");
-  return `<div class="scroller"><table><thead><tr><th>Boss</th><th class="num">Sightings</th>
-    <th class="num">Runs</th><th>Ripples</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="scroller"><table><thead><tr><th>Boss</th></tr></thead><tbody>${
+    D.bosses.map(b => `<tr><td class="bname">${esc(b)}</td></tr>`).join("")
+  }</tbody></table></div>`;
 }
 
 render();
