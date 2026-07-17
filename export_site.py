@@ -69,8 +69,7 @@ def main():
     for b in sorted(boons.values(), key=lambda b: b["name"].lower()):
         boon_list.append({
             "name": b["name"], "rarity": b["rarity"], "description": b["description"],
-            "offered": len(b["offeredKeys"]), "claims": b["claims"],
-            "maxEchoes": b["maxEchoes"], "lastSeen": b["lastSeen"][:10],
+            "lastSeen": b["lastSeen"][:10],
         })
 
     # ---- affixes: name + description + earliest ripple ever seen (no run numbers)
@@ -93,8 +92,8 @@ def main():
     data = {
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "boons": boon_list, "affixes": affix_list, "bosses": boss_list,
-        "totals": {"boons": len(boon_list), "claims": len(claims),
-                   "affixes": len(affix_list), "bosses": len(boss_list)},
+        "totals": {"boons": len(boon_list), "affixes": len(affix_list),
+                   "bosses": len(boss_list)},
     }
 
     out = here / "data.js"

@@ -74,8 +74,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 
 document.getElementById("gen").textContent = D.generated || "?";
 document.getElementById("totals").innerHTML = [
-  [D.totals.boons, "boons seen"], [D.totals.claims, "claims logged"],
-  [D.totals.affixes, "affixes"], [D.totals.bosses, "bosses"],
+  [D.totals.boons, "boons seen"], [D.totals.affixes, "affixes"], [D.totals.bosses, "bosses"],
 ].map(([n, l]) => `<div><b>${n ?? 0}</b><span>${l}</span></div>`).join("");
 
 const state = { tab: "boons", q: "", rarities: new Set(), sort: "name" };
@@ -108,27 +107,24 @@ function boonsView() {
   const sorters = {
     name: (a, b) => a.name.localeCompare(b.name),
     rarity: (a, b) => (RANK[a.rarity] ?? 9) - (RANK[b.rarity] ?? 9) || a.name.localeCompare(b.name),
-    offered: (a, b) => b.offered - a.offered, claims: (a, b) => b.claims - a.claims,
   };
   list.sort(sorters[state.sort]);
   const rows = list.map(b => `<tr>
     <td class="bname r-${esc(b.rarity)}">${esc(b.name)}</td>
     <td>${rcell(b.rarity)}</td>
     <td class="desc">${esc(b.description)}</td>
-    <td class="num">${b.offered}</td>
-    <td class="num">${b.claims}${b.maxEchoes > 1 ? ` <span class="desc">(x${b.maxEchoes})</span>` : ""}</td>
     <td class="num desc">${esc(b.lastSeen)}</td></tr>`).join("");
   return `<div class="controls">
       <input id="q" type="search" placeholder="Search ${D.boons.length} boons..." value="${esc(state.q)}">
       ${["common", "uncommon", "rare", "legendary"].map(r =>
         `<span class="chip ${r} ${state.rarities.has(r) ? "on" : ""}" data-r="${r}">${r}</span>`).join("")}
       <select id="sort">
-        ${[["name", "Sort: name"], ["rarity", "Sort: rarity"], ["offered", "Sort: offered"], ["claims", "Sort: claims"]]
+        ${[["name", "Sort: name"], ["rarity", "Sort: rarity"]]
           .map(([v, l]) => `<option value="${v}" ${state.sort === v ? "selected" : ""}>${l}</option>`).join("")}
       </select></div>
     <div class="scroller"><table><thead><tr><th>Boon</th><th>Rarity</th><th>Description</th>
-      <th class="num">Offered</th><th class="num">Claims</th><th class="num">Last seen</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="6" class="empty">No boons match.</td></tr>`}</tbody></table></div>`;
+      <th class="num">Last seen</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="4" class="empty">No boons match.</td></tr>`}</tbody></table></div>`;
 }
 
 function wireBoons(main) {
