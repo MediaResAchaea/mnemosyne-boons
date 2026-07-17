@@ -52,6 +52,8 @@
   .bname { font-weight: 600; white-space: nowrap; }
   .desc { color: var(--dim); font-size: 13.5px; }
   .quote { color: var(--dim); font-size: 12.5px; font-style: italic; opacity: .75; margin-top: 2px; }
+  .echodesc { color: var(--dim); font-size: 13px; margin-top: 2px; }
+  .echodesc b { color: var(--uncommon); font-weight: 600; }
   .scroller { overflow-x: auto; }
   .empty { color: var(--dim); text-align: center; padding: 30px; }
   footer { text-align: center; color: var(--dim); font-size: 12px; padding-bottom: 30px; }
@@ -114,7 +116,7 @@ function boonsView() {
   const rows = list.map(b => `<tr>
     <td class="bname r-${esc(b.rarity)}">${esc(b.name)}</td>
     <td>${rcell(b.rarity)}</td>
-    <td class="desc">${esc(b.description)}${b.quote ? `<div class="quote">&ldquo;${esc(b.quote)}&rdquo;</div>` : ""}</td>
+    <td class="desc">${esc(b.description)}${b.echoDescription ? `<div class="echodesc"><b>Echoed:</b> ${esc(b.echoDescription)}</div>` : ""}${b.quote ? `<div class="quote">&ldquo;${esc(b.quote)}&rdquo;</div>` : ""}</td>
     <td class="num desc">${esc(b.lastSeen)}</td></tr>`).join("");
   return `<div class="controls">
       <input id="q" type="search" placeholder="Search ${D.boons.length} boons..." value="${esc(state.q)}">

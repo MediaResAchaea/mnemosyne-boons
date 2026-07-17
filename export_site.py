@@ -43,7 +43,7 @@ def main():
     offers = rows(cur, "select run, ripple, name, description, ts from offers")
     claims = rows(cur, "select run, ripple, name, echoes, rarity, description, ts from claims")
     try:  # curated catalog imported from a shared dump; may not exist in older db copies
-        boon_lib = rows(cur, "select name, rarity, description, quote from boon_lib")
+        boon_lib = rows(cur, "select name, rarity, description, quote, echo_description from boon_lib")
     except sqlite3.OperationalError:
         boon_lib = []
     affix_lib = rows(cur, "select name, description, first_ripple from affix_lib")
@@ -63,10 +63,11 @@ def main():
     for r in boon_lib:
         boons[norm(r["name"])] = {"name": r["name"], "rarity": r["rarity"] or "",
                                   "description": r["description"] or "",
-                                  "quote": r["quote"] or "", "lastSeen": ""}
+                                  "quote": r["quote"] or "",
+                                  "echoDescription": r["echo_description"] or "", "lastSeen": ""}
     def observed(name):
         return boons.setdefault(norm(name), {"name": name, "rarity": "", "description": "",
-                                             "quote": "", "lastSeen": ""})
+                                             "quote": "", "echoDescription": "", "lastSeen": ""})
     for r in offers:
         b = observed(r["name"])
         if r["description"] and not b["description"]:
@@ -83,7 +84,8 @@ def main():
     for b in sorted(boons.values(), key=lambda b: b["name"].lower()):
         boon_list.append({
             "name": b["name"], "rarity": b["rarity"], "description": b["description"],
-            "quote": b["quote"], "lastSeen": b["lastSeen"][:10],
+            "quote": b["quote"], "echoDescription": b["echoDescription"],
+            "lastSeen": b["lastSeen"][:10],
         })
 
     # ---- affixes: name + description + earliest ripple ever seen (no run numbers)
