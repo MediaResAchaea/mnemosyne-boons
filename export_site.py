@@ -11,10 +11,18 @@ Default db path: ../../Database_mnemosyne.db relative to this script
 """
 
 import json
+import re
 import sqlite3
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+def norm(name):
+    """Dedupe key: casefold + straight apostrophes + collapsed whitespace."""
+    s = unicodedata.normalize("NFKC", name).replace("’", "'").replace("‘", "'")
+    return re.sub(r"\s+", " ", s).strip().casefold()
 
 
 def rows(cur, sql, args=()):
@@ -34,6 +42,10 @@ def main():
 
     offers = rows(cur, "select run, ripple, name, description, ts from offers")
     claims = rows(cur, "select run, ripple, name, echoes, rarity, description, ts from claims")
+    try:  # curated catalog imported from a shared dump; may not exist in older db copies
+        boon_lib = rows(cur, "select name, rarity, can_echo, description, quote from boon_lib")
+    except sqlite3.OperationalError:
+        boon_lib = []
     affix_lib = rows(cur, "select name, description, first_ripple from affix_lib")
     affix_run = rows(cur, "select name, ripple from affix_run")
     bosses = [r["boss"] for r in rows(cur, "select distinct boss from waves where boss != ''")]
@@ -44,23 +56,26 @@ def main():
     for r in claims:
         r["echoes"] = int(r["echoes"] or 0)
 
-    # ---- boon catalog: one entry per distinct name across offers + claims
+    # ---- boon catalog: curated boon_lib first, overlaid with in-game observations.
+    # Deduped by normalized name; the lib's rarity/description/quote win (full, untruncated),
+    # observations contribute lastSeen and any boons the lib doesn't know about.
     boons = {}
+    for r in boon_lib:
+        boons[norm(r["name"])] = {"name": r["name"], "rarity": r["rarity"] or "",
+                                  "description": r["description"] or "",
+                                  "quote": r["quote"] or "",
+                                  "echo": bool(r["can_echo"]), "lastSeen": ""}
+    def observed(name):
+        return boons.setdefault(norm(name), {"name": name, "rarity": "", "description": "",
+                                             "quote": "", "echo": False, "lastSeen": ""})
     for r in offers:
-        b = boons.setdefault(r["name"], {"name": r["name"], "rarity": "", "description": "",
-                                         "offeredKeys": set(), "claims": 0,
-                                         "maxEchoes": 0, "lastSeen": ""})
-        b["offeredKeys"].add((r["run"], r["ripple"]))
-        if r["description"]:
-            b["description"] = r["description"]  # latest wins (rows are insert-ordered)
+        b = observed(r["name"])
+        if r["description"] and not b["description"]:
+            b["description"] = r["description"]
         b["lastSeen"] = max(b["lastSeen"], r["ts"] or "")
     for r in claims:
-        b = boons.setdefault(r["name"], {"name": r["name"], "rarity": "", "description": "",
-                                         "offeredKeys": set(), "claims": 0,
-                                         "maxEchoes": 0, "lastSeen": ""})
-        b["claims"] += 1
-        b["maxEchoes"] = max(b["maxEchoes"], r["echoes"])
-        if r["rarity"]:
+        b = observed(r["name"])
+        if r["rarity"] and not b["rarity"]:
             b["rarity"] = r["rarity"].lower()
         if r["description"] and not b["description"]:
             b["description"] = r["description"]
@@ -69,7 +84,7 @@ def main():
     for b in sorted(boons.values(), key=lambda b: b["name"].lower()):
         boon_list.append({
             "name": b["name"], "rarity": b["rarity"], "description": b["description"],
-            "lastSeen": b["lastSeen"][:10],
+            "quote": b["quote"], "echo": b["echo"], "lastSeen": b["lastSeen"][:10],
         })
 
     # ---- affixes: name + description + earliest ripple ever seen (no run numbers)
