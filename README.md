@@ -1,7 +1,7 @@
 # Mnemosyne Boon Database
 
-Static site publishing the Tides of Memory boon data captured in-game by the
-`mnemosyne.lua` Mudlet tracker (Achaea, Treyal).
+Static site publishing the Tides of Memory boon data sourced from Laorir's
+Mnemosyne API (Achaea).
 
 Live: https://mediaresachaea.github.io/mnemosyne-boons/
 
