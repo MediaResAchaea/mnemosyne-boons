@@ -52,11 +52,23 @@ def fetch(url):
         export = json.load(r)
     if not isinstance(export, list) or not export:
         sys.exit(f"export from {url} is not a non-empty list")
+    # A boon only needs a name: the tracker sometimes records one before anyone has seen its
+    # text (description/echoes null), and merge() keeps whatever data.js already has for the
+    # missing fields. Records without a name are skipped rather than failing the whole run.
+    good = []
     for b in export:
-        if not (isinstance(b, dict) and isinstance(b.get("name"), str) and b["name"].strip()
-                and isinstance(b.get("description"), str)):
-            sys.exit(f"malformed boon in export: {str(b)[:200]}")
-    return export
+        if not (isinstance(b, dict) and isinstance(b.get("name"), str) and b["name"].strip()):
+            print(f"skipping malformed boon in export: {str(b)[:200]}", file=sys.stderr)
+            continue
+        for key in ("description", "quote", "rarity", "updated_at"):
+            if not isinstance(b.get(key), str):
+                b[key] = None
+        if not isinstance(b.get("echoes"), list):
+            b["echoes"] = None
+        good.append(b)
+    if not good:
+        sys.exit(f"export from {url} has no usable boons")
+    return good
 
 
 def merge(site_boons, export):
@@ -71,7 +83,8 @@ def merge(site_boons, export):
         b["rarity"] = (e.get("rarity") or "").lower() or b["rarity"]
         b["description"] = clean(e["description"], names, conflicts) or b["description"]
         b["quote"] = squash(e.get("quote")) or b["quote"]
-        echoes = sorted((x for x in e.get("echoes") or [] if x.get("description")),
+        echoes = sorted((x for x in e.get("echoes") or []
+                         if isinstance(x, dict) and isinstance(x.get("description"), str)),
                         key=lambda x: x.get("echo_number") or 0)
         if echoes:  # the site shows one "Echoed:" line: the highest echo the API has text for
             b["echoDescription"] = clean(echoes[-1]["description"], names, conflicts)
